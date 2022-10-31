@@ -2,12 +2,14 @@ import { SQS } from 'aws-sdk';
 import { ClientConfiguration } from 'aws-sdk/clients/acm';
 import { v4 as uuidv4 } from 'uuid';
 
-import { IResponseMessage, IResponseMessages, QueueRequestMessage } from '../types/interfaces';
+import {
+  IResponseMessage,
+  IResponseMessages,
+  QueueRequestMessage,
+} from '../types/interfaces';
 
 export class AwsFIFO {
   private readonly fifo;
-  private readonly queueURL =
-    'https://sqs.us-east-2.amazonaws.com/063696436519';
 
   constructor(config: ClientConfiguration = {}) {
     const conf = {
@@ -18,8 +20,8 @@ export class AwsFIFO {
     this.fifo = new SQS(conf);
   }
 
-  private getQueueUrl(queueName: string): string {
-    return `${this.queueURL}/${queueName}`;
+  private getQueueUrl(QueueName: string): Promise<SQS.GetQueueUrlResult> {
+    return this.fifo.getQueueUrl({ QueueName }).promise();
   }
 
   private formatMessage(messageDetail: QueueRequestMessage) {
@@ -35,9 +37,15 @@ export class AwsFIFO {
     queueName: string,
     messageDetail: QueueRequestMessage
   ): Promise<IResponseMessage> {
+    const { QueueUrl } = await this.getQueueUrl(queueName);
+
+    if (!QueueUrl) throw new Error('No queue found');
+
     const params: SQS.SendMessageRequest = {
-      ...this.formatMessage(messageDetail),
-      QueueUrl: this.getQueueUrl(queueName),
+      MessageBody: JSON.stringify(messageDetail.MessageBody),
+      MessageDeduplicationId: messageDetail.DeduplicationId ?? uuidv4(),
+      MessageGroupId: messageDetail.MessageGroupId,
+      QueueUrl,
     };
 
     try {
@@ -49,12 +57,16 @@ export class AwsFIFO {
     }
   }
 
-  sendMessages(
+  async sendMessages(
     queueName: string,
     messageDetails: readonly QueueRequestMessage[]
   ): Promise<IResponseMessages> {
+    const { QueueUrl } = await this.getQueueUrl(queueName);
+
+    if (!QueueUrl) throw new Error('No queue found');
+
     const batchMessages: SQS.SendMessageBatchRequest = {
-      QueueUrl: this.getQueueUrl(queueName),
+      QueueUrl,
       Entries: [],
     };
     batchMessages.Entries = messageDetails.map((detail) =>
@@ -82,12 +94,16 @@ export class AwsFIFO {
 
   async receiveMessages(
     queueName: string,
-    limit: number = 1,
-    visibilityTimeoutInSec: number = 60
+    limit = 1,
+    visibilityTimeoutInSec = 60
   ): Promise<SQS.ReceiveMessageResult> {
+    const { QueueUrl } = await this.getQueueUrl(queueName);
 
-    const params = {
-      QueueUrl: this.getQueueUrl(queueName),
+    if (!QueueUrl) throw new Error('No queue found');
+
+    const params: SQS.ReceiveMessageRequest = {
+      QueueUrl,
+      AttributeNames: ['MessageGroupId'],
       MaxNumberOfMessages: limit,
       VisibilityTimeout: visibilityTimeoutInSec,
     };
