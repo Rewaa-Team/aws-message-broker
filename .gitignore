@@ -10,3 +10,4 @@ yarn.lock
 .DS_Store
 .vscode
 .rpt2_cache
+tsconfig.tsbuildinfo
