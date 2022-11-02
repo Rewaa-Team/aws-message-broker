@@ -9,7 +9,7 @@ import {
 } from '../types/interfaces';
 
 export class AwsFIFO {
-  private readonly fifo;
+  private readonly queue;
 
   constructor(config: ClientConfiguration = {}) {
     const conf = {
@@ -17,11 +17,11 @@ export class AwsFIFO {
       region: 'us-east-2',
       ...config,
     };
-    this.fifo = new SQS(conf);
+    this.queue = new SQS(conf);
   }
 
   private getQueueUrl(QueueName: string): Promise<SQS.GetQueueUrlResult> {
-    return this.fifo.getQueueUrl({ QueueName }).promise();
+    return this.queue.getQueueUrl({ QueueName }).promise();
   }
 
   private formatMessage(messageDetail: QueueRequestMessage) {
@@ -49,7 +49,7 @@ export class AwsFIFO {
     };
 
     try {
-      const messageResponse = await this.fifo.sendMessage(params).promise();
+      const messageResponse = await this.queue.sendMessage(params).promise();
       return { EntryId: messageResponse.MessageId };
     } catch (err) {
       console.log(err);
@@ -73,7 +73,7 @@ export class AwsFIFO {
       this.formatMessage(detail)
     );
 
-    return this.fifo
+    return this.queue
       .sendMessageBatch(batchMessages)
       .promise()
       .then((res) => {
@@ -109,8 +109,27 @@ export class AwsFIFO {
     };
 
     try {
-      const messageResponse = await this.fifo.receiveMessage(params).promise();
+      const messageResponse = await this.queue.receiveMessage(params).promise();
       return messageResponse;
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
+  }
+
+  async removeMessage(queueName: string, ReceiptHandle: string) {
+    try {
+      const { QueueUrl } = await this.getQueueUrl(queueName);
+
+      if (!QueueUrl) throw new Error('No queue found');
+
+      const deleteMsg = await this.queue
+        .deleteMessage({
+          QueueUrl,
+          ReceiptHandle,
+        })
+        .promise();
+      console.log(deleteMsg);
     } catch (err) {
       console.log(err);
       throw err;

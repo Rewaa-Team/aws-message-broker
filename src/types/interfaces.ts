@@ -7,6 +7,7 @@ export interface IRequestMessage {
   Detail: any;
   DetailType: string;
   Source?: string;
+  EventBusName?: string;
 }
 
 export interface IRequestMessages {
