@@ -2,8 +2,8 @@
   "name": "aws-message-broker",
   "version": "1.0.0",
   "description": "Push messages on AWS services with a unified interface",
-  "main": "build/main/index.js",
-  "typings": "build/main/index.d.ts",
+  "main": "build/index.js",
+  "typings": "build/index.d.ts",
   "module": "build/module/index.js",
   "repository": "https://github.com/mohuk/aws-message-broker",
   "license": "MIT",
@@ -12,6 +12,7 @@
     "build": "run-p build:*",
     "build:main": "tsc -p tsconfig.json",
     "fix": "run-s fix:*",
+    "start": "ts-node src/index.ts",
     "fix:prettier": "prettier \"src/**/*.ts\" --write",
     "fix:lint": "eslint src --ext .ts --fix",
     "test": "run-s build test:*",
@@ -41,11 +42,13 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@bitauth/libauth": "^1.17.1"
+    "@bitauth/libauth": "^1.17.1",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@ava/typescript": "^1.1.1",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
+    "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^4.0.1",
     "@typescript-eslint/parser": "^4.0.1",
     "ava": "^4.3.3",
